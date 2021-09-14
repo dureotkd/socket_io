@@ -1,47 +1,113 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <title>Socket.IO chat</title>
     <style>
-      body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-      #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-      #input:focus { outline: none; }
-      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+      }
 
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages > li { padding: 0.5rem 1rem; }
-      #messages > li:nth-child(odd) { background: #efefef; }
+      #messages li {
+        padding: 5px 10px;
+      }
+
+      form {
+        display: flex;
+        background: #000;
+        padding: 3px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+      }
+
+      form select {
+        width: 120px;
+        height: 100%;
+      }
+
+      form input {
+        border: 0;
+        padding: 10px;
+        width: 100%;
+        margin-right: 0.5%;
+      }
+
+      form button {
+        width: 9%;
+        background: skyblue;
+        color: white;
+        border: none;
+        padding: 10px;
+      }
     </style>
   </head>
   <body>
     <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" autocomplete="off" /><button>Send</button>
+    <form action="">
+      <select>
+        <option value="0번방">0번방</option>
+        <option value="1번방">1번방</option>
+        <option value="2번방">2번방</option>
+      </select>
+      <input id="m" autocomplete="off" />
+      <button>보내기</button>
     </form>
     <script src="/socket.io/socket.io.js"></script>
-
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
-      var socket = io();
+      $(() => {
+        const name = prompt("이름을 입력해주세요");
 
-      var messages = document.getElementById('messages');
-      var form = document.getElementById('form');
-      var input = document.getElementById('input');
+        const socket = io();
+        let room = ["room1", "room2", "room3"];
+        let preRoom;
 
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (input.value) {
-          socket.emit('chat message', input.value);
-          input.value = '';
-        }
-      });
+        $("select").on("focus", (event) => {
+          preRoom = Number($(event.target).val()[0]);
+        });
 
-      socket.on('chat message', function(msg) {
-        var item = document.createElement('li');
-        item.textContent = msg;
-        messages.appendChild(item);
-        window.scrollTo(0, document.body.scrollHeight);
+        let num = 0;
+
+        socket.emit("joinRoom", num, name);
+
+        $("select").change((event) => {
+          const roomNumber = Number($(event.target).val()[0]);
+
+          console.log(preRoom);
+
+          socket.emit("leaveRoom", preRoom, name);
+          socket.emit("joinRoom", roomNumber, name);
+
+          num = roomNumber;
+        });
+
+        $("form").submit(() => {
+          socket.emit("chat-msg", num, name, $("#m").val());
+          $("#m").val("");
+          return false;
+        });
+
+        socket.on("chat-msg", (name, msg) => {
+          $("#messages").append($("<li>").text(name + "  :  " + msg));
+        });
+
+        socket.on("leaveRoom", (num, name) => {
+          $("#messages").append(
+            $("<li>").text(`${name}님이 ${num + 1}번 방을 퇴장하셨습니다. :[`)
+          );
+        });
+
+        socket.on("joinRoom", (num, name) => {
+          $("#messages").append(
+            $("<li>").text(`${name}님이 ${num + 1}번 방에 입장하셨습니다. :]`)
+          );
+        });
       });
     </script>
   </body>
